@@ -88,6 +88,11 @@ jobs:
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
+      # 决定是否开启 SSH 会话
+    - name: Setup tmate session for SSH
+      uses: mxschmitt/action-tmate@v3
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.ssh == 'true'
+
     - name: Compile the firmware
       id: compile
       run: |
