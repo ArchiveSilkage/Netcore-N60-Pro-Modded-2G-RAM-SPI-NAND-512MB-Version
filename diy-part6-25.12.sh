@@ -49,6 +49,17 @@ cp -r /tmp/pkgs-src/utils/tar package/tar
 # SanDisk CZ80 (0781:5580) 诊断结论（2026-11-07）：设备以 BOT(usb-storage) 正常绑定并挂载，
 # 无 UAS 兼容问题，无需烘焙 usb-storage.quirks；旧固件"不识别"系缺 kmod-fs-exfat（config 已补）。
 
+# 默认 LAN IP 改为 192.168.6.1（含 DHCP 起始段 192.168.6.100）
+sed -i 's/192\.168\.1\.1/192.168.6.1/g' package/base-files/files/bin/config_generate
+
+# AdGuardHome luci 更新脚本适配 25.12（apk 时代无 opkg，实测报错 line 121）：
+# 1) 架构判定改用 uname -m（aarch64 -> arm64 分支脚本自带）
+AGH_SH=package/luci-app-adguardhome/root/usr/share/AdGuardHome/update_core.sh
+sed -i '/opkg info kernel/c\Archt="$(uname -m)"' $AGH_SH
+# 2) 可选 upx 压缩路径里的 xz 自举 opkg 改 apk（默认不启用 upx，不影响主流程）
+sed -i '/opkg install xz/c\ \twhich xz || apk add xz || (echo "xz download fail" \&\& EXIT 1)' $AGH_SH
+grep -q "opkg info kernel" $AGH_SH && { echo 'ERROR: AdGuardHome update_core.sh adapt failed'; exit 1; }
+
 # 移除 LuCI 捆绑的在线升级（attendedsysupgrade），恩山帖建议勿用
 sed -i '/attendedsysupgrade/d' feeds/luci/collections/luci/Makefile
 
