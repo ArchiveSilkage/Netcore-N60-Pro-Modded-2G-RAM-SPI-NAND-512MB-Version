@@ -1,0 +1,7 @@
+# SSH private keys — never commit
+id_ed25519_20261107102433
+id_*
+*.pem
+
+# ZCode local state
+.zcode/
