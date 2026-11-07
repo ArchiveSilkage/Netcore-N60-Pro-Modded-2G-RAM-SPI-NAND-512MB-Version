@@ -168,11 +168,16 @@ jobs:
         retain_days: 0
         keep_minimum_runs: 2
 
-    - name: Remove old Releases
-      uses: dev-drprasad/delete-older-releases@master
+    - name: Remove old Releases (own FIRMWARE_TAG only, keep latest 6)
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
-      with:
-        keep_latest: 6
-        delete_tags: true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # 原 dev-drprasad/delete-older-releases 按全仓库最新 6 个计数，多管线并存时会
+        # 误删其它管线的正式版（2026-11-07 实测把全部 6.6 release 连 tag 清掉）。
+        # 改为只删本管线 FIRMWARE_TAG 匹配的旧版，保留最新 6 个。
+        gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName \
+          --jq '.[].tagName' | grep -F -- "${{ env.FIRMWARE_TAG }}" | tail -n +7 > /tmp/old_tags || true
+        while read -r t; do
+          [ -n "$t" ] && gh release delete "$t" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+        done < /tmp/old_tags
