@@ -52,6 +52,16 @@ cp -r /tmp/pkgs-src/utils/tar package/tar
 # 默认 LAN IP 改为 192.168.6.1（含 DHCP 起始段 192.168.6.100）
 sed -i 's/192\.168\.1\.1/192.168.6.1/g' package/base-files/files/bin/config_generate
 
+# USB3 SS 链路问题（run#8 后实测）：SS 训练能通过但 SetAddress 全部超时
+# （error -62/-71），且 6.12 内核不再像 6.6 那样自动回落 HS 总线 → USB3 设备
+# 彻底不识别、USB2 设备正常。旧 6.6 固件上 CZ80 实际也是 SS 失败回落 480M HS。
+# 板级 dts 覆盖 &ssusb 的 phys：去掉 U3 PHY 引用，保留两个 USB2 端口，
+# 使所有 USB 设备（含 USB3 盘）直接以 HS 480M 枚举，行为与旧固件一致。
+sed -i '/^&ssusb {/,/^};/s/\tstatus = "okay";/\tstatus = "okay";\n\tphys = <\&u2port0 PHY_TYPE_USB2>, <\&u2port1 PHY_TYPE_USB2>;/' \
+	target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts
+grep -q "u2port1 PHY_TYPE_USB2" target/linux/mediatek/dts/mt7986a-netcore-n60-pro.dts \
+	|| { echo 'ERROR: ssusb phys override failed'; exit 1; }
+
 # AdGuardHome luci 更新脚本适配 25.12（apk 时代无 opkg，实测报错 line 121）：
 # 1) 架构判定改用 uname -m（aarch64 -> arm64 分支脚本自带）
 AGH_SH=package/luci-app-adguardhome/root/usr/share/AdGuardHome/update_core.sh
