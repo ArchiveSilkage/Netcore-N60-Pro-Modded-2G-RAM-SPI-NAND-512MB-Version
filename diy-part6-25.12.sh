@@ -21,6 +21,14 @@ grep -q 'reg = <0x0580000 0x1fa80000>;' $DTS || { echo 'ERROR: ubi hardmod patch
 # 注：chasey 25.12 分支只有 netcore_n60-pro（FIT/ubootmod）设备块，
 # 不存在 netcore_n60-pro-mtkuboot（Issue #143 仅涉及 dev 分支），无需处理。
 
+# luci-app-cpu-status：chasey 树与全部 feeds 均无此包（唯一上游 gSpotx2f，支持 25.12），
+# 克隆进树；不放入共享的 diy-part1.sh，避免与 6.6 管线的 padavanonly 内置版重名冲突
+git clone --depth 1 https://github.com/gSpotx2f/luci-app-cpu-status package/luci-app-cpu-status \
+	|| { echo 'ERROR: clone luci-app-cpu-status failed'; exit 1; }
+
+# SanDisk CZ80 (0781:5580) 诊断结论（2026-11-07）：设备以 BOT(usb-storage) 正常绑定并挂载，
+# 无 UAS 兼容问题，无需烘焙 usb-storage.quirks；旧固件"不识别"系缺 kmod-fs-exfat（config 已补）。
+
 # 移除 LuCI 捆绑的在线升级（attendedsysupgrade），恩山帖建议勿用
 sed -i '/attendedsysupgrade/d' feeds/luci/collections/luci/Makefile
 
