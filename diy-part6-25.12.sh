@@ -26,6 +26,26 @@ grep -q 'reg = <0x0580000 0x1fa80000>;' $DTS || { echo 'ERROR: ubi hardmod patch
 git clone --depth 1 https://github.com/gSpotx2f/luci-app-cpu-status package/luci-app-cpu-status \
 	|| { echo 'ERROR: clone luci-app-cpu-status failed'; exit 1; }
 
+# iStore：不走 feed（索引机制在本树静默丢弃 luci-app-store，见 run#5-#7 取证），
+# 直接克隆入树；同时去掉 +tar 依赖（busybox tar 已覆盖，GNU tar 的 feed 包
+# 在本树同样无法生成 Kconfig 符号，一并入树试验）
+git clone --depth 1 https://github.com/istoreos/istore /tmp/istore-src \
+	|| { echo 'ERROR: clone istore failed'; exit 1; }
+for d in luci-app-store luci-lib-taskd luci-lib-xterm taskd; do
+	if [ -d /tmp/istore-src/luci/$d ]; then
+		cp -r /tmp/istore-src/luci/$d package/
+	elif [ -d /tmp/istore-src/$d ]; then
+		cp -r /tmp/istore-src/$d package/
+	else
+		echo "ERROR: istore component $d not found"; exit 1
+	fi
+done
+sed -i 's/ +tar//' package/luci-app-store/Makefile
+git clone --depth 1 --filter=blob:none --sparse https://github.com/immortalwrt/packages /tmp/pkgs-src \
+	|| { echo 'ERROR: clone packages feed failed'; exit 1; }
+git -C /tmp/pkgs-src sparse-checkout set utils/tar
+cp -r /tmp/pkgs-src/utils/tar package/tar
+
 # SanDisk CZ80 (0781:5580) 诊断结论（2026-11-07）：设备以 BOT(usb-storage) 正常绑定并挂载，
 # 无 UAS 兼容问题，无需烘焙 usb-storage.quirks；旧固件"不识别"系缺 kmod-fs-exfat（config 已补）。
 

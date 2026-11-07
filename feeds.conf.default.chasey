@@ -3,5 +3,6 @@ src-git luci https://github.com/immortalwrt/luci.git;openwrt-25.12
 src-git routing https://github.com/openwrt/routing.git;openwrt-25.12
 src-git telephony https://github.com/openwrt/telephony.git;openwrt-25.12
 src-git video https://github.com/openwrt/video.git;openwrt-25.12
-src-git istore https://github.com/linkease/istore;main
 src-git nikki https://github.com/nikkinikki-org/OpenWrt-nikki.git;main
+# istore 不走 feed：feed 索引机制在本树会静默丢弃 luci-app-store（run#5-#7 取证），
+# 改由 diy-part6-25.12.sh 直接克隆入树
