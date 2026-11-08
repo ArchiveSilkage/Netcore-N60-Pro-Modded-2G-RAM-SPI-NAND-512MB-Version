@@ -69,13 +69,6 @@ sed -i '/opkg info kernel/c\Archt="$(uname -m)"' $AGH_SH
 # 2) 可选 upx 压缩路径里的 xz 自举 opkg 改 apk（默认不启用 upx，不影响主流程）
 sed -i '/opkg install xz/c\ \twhich xz || apk add xz || (echo "xz download fail" \&\& EXIT 1)' $AGH_SH
 grep -q "opkg info kernel" $AGH_SH && { echo 'ERROR: AdGuardHome update_core.sh adapt failed'; exit 1; }
-# 3) AGH 出厂即走 dnsmasq 转发模式（AGH DNS 挪 :54，dnsmasq:53 转发 127.0.0.1#54；
-#    核心二进制需刷机后手动安装或经 luci「更新核心」下载）
-AGH_UCI=package/luci-app-adguardhome/root/etc/config/AdGuardHome
-if [ -f $AGH_UCI ]; then
-	sed -i "s/option redirect 'none'/option redirect 'dnsmasq'/" $AGH_UCI
-	grep -q "redirect 'dnsmasq'" $AGH_UCI || { echo 'ERROR: AdGuardHome uci redirect patch failed'; exit 1; }
-fi
 
 # IPv6 扩展前缀方案调优（ISP 仅下发 /64 无 PD，RFC 7278）：
 # 1) 关闭 WAN6 源过滤——sourcefilter=1（默认）会把默认路由按源地址复制成
@@ -89,9 +82,9 @@ fi
 # 以上全部来自实测 + odhcpd #388/#23246/openwrt wiki 取证（2026-11-08）。
 UD=files/etc/uci-defaults
 mkdir -p $UD
-cat > $UD/99-n60pro-ipv6-agh <<'EOF'
+cat > $UD/99-n60pro-ipv6 <<'EOF'
 #!/bin/sh
-# N60 Pro: IPv6 extendprefix tuning + AdGuardHome dnsmasq-forward
+# N60 Pro: IPv6 extendprefix tuning (sourcefilter / ra_default / NDP relay)
 uci -q set network.wan6.sourcefilter='0'
 uci -q commit network
 uci -q get dhcp.wan6 >/dev/null || { uci -q add dhcp wan6; uci -q rename dhcp.@dhcp[-1]='wan6'; }
@@ -100,10 +93,6 @@ uci -q set dhcp.wan6.ndp='relay'
 uci -q set dhcp.lan.ra_default='1'
 uci -q set dhcp.lan.ndp='relay'
 uci -q commit dhcp
-uci -q get AdGuardHome.AdGuardHome >/dev/null && {
-	uci -q set AdGuardHome.AdGuardHome.redirect='dnsmasq'
-	uci -q commit AdGuardHome
-}
 exit 0
 EOF
 
